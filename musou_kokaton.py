@@ -361,24 +361,28 @@ def main():
     clock = pg.time.Clock()
     while True:
         key_lst = pg.key.get_pressed()
-        if key_lst[pg.K_e] and score.value >= 20:
-            score.value -= 20
-            emps.add(EMP(emys, bombs, screen))
         for event in pg.event.get():
             if event.type == pg.QUIT:
                 return 0
+            #ビーム発射
             if event.type == pg.KEYDOWN and event.key == pg.K_SPACE:
                 beams.add(Beam(bird))
+            #重力場
             if event.type == pg.KEYDOWN and event.key == pg.K_RETURN and score.value >= 200:
                 g = Gravity(400)
                 gravity.add(g)
                 score.value -= 200
-                
+            #EMP
+            if event.type == pg.KEYDOWN and event.key == pg.K_e:
+                if score.value >= 20:
+                    score.value -= 20
+                    emps.add(EMP(emys, bombs, screen))
+            #シールド
             if event.type == pg.KEYDOWN and event.key == pg.K_s:
                 if score.value >= 50 and len(shields) == 0:
                     shields.add(Shield(bird, 400))
                     score.value -= 50
-
+                    
             if key_lst[pg.K_LSHIFT]:
                 #複数ビーム
                 if event.type == pg.KEYDOWN and event.key == pg.K_SPACE:
@@ -413,7 +417,6 @@ def main():
         for shield in shields:
             for bomb in pg.sprite.spritecollide(shield, bombs, True):
                 exps.add(Explosion(bomb, 30))
-
         
         for bomb in pg.sprite.spritecollide(bird, bombs, True):
             if bomb.state == "inactive":

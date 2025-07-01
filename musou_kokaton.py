@@ -242,6 +242,43 @@ class Score:
         screen.blit(self.image, self.rect)
 
 
+class Shield(pg.sprite.Sprite):
+    def __init__(self, bird: Bird, life: int):
+        super().__init__()
+        width = 20
+        height = bird.rect.height * 2
+        # 手順1: 空のSurface生成
+        self.base_image = pg.Surface((width, height), pg.SRCALPHA)
+        # 手順2: Surfaceにrectをdraw
+        pg.draw.rect(self.base_image, (0, 0, 255), (0, 0, width, height))
+        self.image = self.base_image
+        self.rect = self.image.get_rect()
+        self.life = life
+        self.update(bird)  # 初期位置・角度反映
+
+    def update(self, bird: Bird):
+        # 手順3: こうかとんの向きを取得
+        vx, vy = bird.dire
+        # 手順4: 角度を求める
+        angle = math.degrees(math.atan2(-vy, vx))
+        # 手順5: Surfaceを回転
+        self.image = pg.transform.rotozoom(self.base_image, angle, 1.0)
+        self.rect = self.image.get_rect()
+        # 手順6: こうかとんの中心から向きに応じて配置
+        norm = math.hypot(vx, vy)
+        if norm == 0:
+            vx, vy = 1, 0
+            norm = 1
+        offset_dist = bird.rect.width  # こうかとん1体分
+        ox = vx / norm * offset_dist
+        oy = vy / norm * offset_dist
+        self.rect.centerx = bird.rect.centerx + ox
+        self.rect.centery = bird.rect.centery + oy
+        self.life -= 1
+        if self.life < 0:
+            self.kill()
+
+
 def main():
     pg.display.set_caption("真！こうかとん無双")
     screen = pg.display.set_mode((WIDTH, HEIGHT))
@@ -253,6 +290,7 @@ def main():
     beams = pg.sprite.Group()
     exps = pg.sprite.Group()
     emys = pg.sprite.Group()
+    shields = pg.sprite.Group()
 
     tmr = 0
     clock = pg.time.Clock()
@@ -263,6 +301,10 @@ def main():
                 return 0
             if event.type == pg.KEYDOWN and event.key == pg.K_SPACE:
                 beams.add(Beam(bird))
+            if event.type == pg.KEYDOWN and event.key == pg.K_s:
+                if score.value >= 50 and len(shields) == 0:
+                    shields.add(Shield(bird, 400))
+                    score.value -= 50
         screen.blit(bg_img, [0, 0])
 
         if tmr%200 == 0:  # 200フレームに1回，敵機を出現させる
@@ -277,10 +319,15 @@ def main():
             exps.add(Explosion(emy, 100))  # 爆発エフェクト
             score.value += 10  # 10点アップ
             bird.change_img(6, screen)  # こうかとん喜びエフェクト
+        # ビームと爆弾の衝突判定
+        for bomb in pg.sprite.groupcollide(bombs, beams, True, True).keys():
+            exps.add(Explosion(bomb, 30))
+            score.value += 1  # 爆弾を壊したら1点アップ
 
-        for bomb in pg.sprite.groupcollide(bombs, beams, True, True).keys():  # ビームと衝突した爆弾リスト
-            exps.add(Explosion(bomb, 50))  # 爆発エフェクト
-            score.value += 1  # 1点アップ
+        # 防御壁と爆弾の衝突判定
+        for shield in shields:
+            for bomb in pg.sprite.spritecollide(shield, bombs, True):
+                exps.add(Explosion(bomb, 30))
 
         for bomb in pg.sprite.spritecollide(bird, bombs, True):  # こうかとんと衝突した爆弾リスト
             bird.change_img(8, screen)  # こうかとん悲しみエフェクト
@@ -290,6 +337,8 @@ def main():
             return
 
         bird.update(key_lst, screen)
+        shields.update(bird)
+        shields.draw(screen)
         beams.update()
         beams.draw(screen)
         emys.update()

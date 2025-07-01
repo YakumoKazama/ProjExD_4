@@ -141,14 +141,14 @@ class Beam(pg.sprite.Sprite):
     """
     ビームに関するクラス
     """
-    def __init__(self, bird: Bird):
+    def __init__(self, bird: Bird, angle0: float = 0):
         """
         ビーム画像Surfaceを生成する
         引数 bird：ビームを放つこうかとん
         """
         super().__init__()
         self.vx, self.vy = bird.dire
-        angle = math.degrees(math.atan2(-self.vy, self.vx))
+        angle = math.degrees(math.atan2(-self.vy, self.vx)) + angle0
         self.image = pg.transform.rotozoom(pg.image.load(f"fig/beam.png"), angle, 1.0)
         self.vx = math.cos(math.radians(angle))
         self.vy = -math.sin(math.radians(angle))
@@ -156,6 +156,7 @@ class Beam(pg.sprite.Sprite):
         self.rect.centery = bird.rect.centery+bird.rect.height*self.vy
         self.rect.centerx = bird.rect.centerx+bird.rect.width*self.vx
         self.speed = 10
+        self.angle0 = angle0
 
     def update(self):
         """
@@ -166,6 +167,20 @@ class Beam(pg.sprite.Sprite):
         if check_bound(self.rect) != (True, True):
             self.kill()
 
+
+class NeoBeam():
+    """
+    複数ビームに関するクラス
+    """
+    def __init__(self, bird: Bird, num: int):
+        self.bird = bird
+        self.num = num
+    
+    def gen_beams(self) -> list[Beam, ]:
+        """
+        角度を変えたビームインスタンスの配列を返す
+        """
+        return [Beam(self.bird, i) for i in range(-180, +181, 361//(self.num-1))]
 
 class Explosion(pg.sprite.Sprite):
     """
@@ -254,6 +269,8 @@ def main():
     exps = pg.sprite.Group()
     emys = pg.sprite.Group()
 
+    NUM_OF_BEAMS = 50 #1度に発射するビームの本数
+
     tmr = 0
     clock = pg.time.Clock()
     while True:
@@ -263,6 +280,11 @@ def main():
                 return 0
             if event.type == pg.KEYDOWN and event.key == pg.K_SPACE:
                 beams.add(Beam(bird))
+            if key_lst[pg.K_LSHIFT]:
+                #複数ビーム
+                if event.type == pg.KEYDOWN and event.key == pg.K_SPACE:
+                    beams.add(NeoBeam(bird, NUM_OF_BEAMS).gen_beams())
+
         screen.blit(bg_img, [0, 0])
 
         if tmr%200 == 0:  # 200フレームに1回，敵機を出現させる

@@ -258,6 +258,22 @@ class Score:
         self.image = self.font.render(f"Score: {self.value}", 0, self.color)
         screen.blit(self.image, self.rect)
 
+class Gravity(pg.sprite.Sprite):
+    """
+    画面全体を覆う重力場を発生させる
+    """
+    def __init__(self, life):
+        super().__init__()
+        self.life = life
+        self.image = pg.Surface((WIDTH, HEIGHT))  
+        pg.draw.rect(self.image, (0, 0, 0), (0, 0, WIDTH, HEIGHT)) 
+        self.image.set_alpha(120)  
+        self.rect = self.image.get_rect()
+
+    def update(self):
+        self.life -= 1
+        if self.life < 0:
+            self.kill()
 
 class EMP(pg.sprite.Sprite):
     """
@@ -335,6 +351,7 @@ def main():
     beams = pg.sprite.Group()
     exps = pg.sprite.Group()
     emys = pg.sprite.Group()
+    gravity = pg.sprite.Group()
     shields = pg.sprite.Group()
 
     NUM_OF_BEAMS = 50 #1度に発射するビームの本数
@@ -351,6 +368,11 @@ def main():
                 return 0
             if event.type == pg.KEYDOWN and event.key == pg.K_SPACE:
                 beams.add(Beam(bird))
+            if event.type == pg.KEYDOWN and event.key == pg.K_RETURN and score.value >= 200:
+                g = Gravity(400)
+                gravity.add(g)
+                score.value -= 200
+                
             if event.type == pg.KEYDOWN and event.key == pg.K_s:
                 if score.value >= 50 and len(shields) == 0:
                     shields.add(Shield(bird, 400))
@@ -400,6 +422,16 @@ def main():
             pg.display.update()
             time.sleep(2)
             return
+
+        for g in gravity: # 爆弾と衝突判定
+            for bomb in pg.sprite.spritecollide(g, bombs, False):
+                exps.add(Explosion(bomb,50))
+                bomb.kill()
+
+            # 敵機と衝突判定
+            for enemy in pg.sprite.spritecollide(g, emys, False):
+                exps.add(Explosion(enemy,100))
+                enemy.kill()
         
         bird.update(key_lst, screen)
         shields.update(bird)
@@ -410,6 +442,12 @@ def main():
         emys.draw(screen)
         bombs.update()
         bombs.draw(screen)
+        gravity.update()
+        gravity.draw(screen)
+        exps.update()
+        exps.draw(screen)
+        score.update(screen)
+        bird.update(key_lst, screen)
         score.update(screen)
         emps.update()
         emps.draw(screen) 

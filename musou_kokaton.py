@@ -308,7 +308,7 @@ def main():
     shields = pg.sprite.Group()
 
     NUM_OF_BEAMS = 50 #1度に発射するビームの本数
-
+    score.value = 10000
     tmr = 0
     clock = pg.time.Clock()
     while True:

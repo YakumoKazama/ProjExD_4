@@ -72,6 +72,8 @@ class Bird(pg.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.rect.center = xy
         self.speed = 10
+        self.state = "normal"  # 通常状態or無敵状態
+        self.hyper_life = 0    # 無敵時間
 
     def change_img(self, num: int, screen: pg.Surface):
         """
@@ -81,6 +83,28 @@ class Bird(pg.sprite.Sprite):
         """
         self.image = pg.transform.rotozoom(pg.image.load(f"fig/{num}.png"), 0, 0.9)
         screen.blit(self.image, self.rect)
+
+    def reset_images(self):
+        """
+        無敵終了時に通常の画像（3.png）に戻す
+        """
+        try:
+            img0 = pg.transform.rotozoom(pg.image.load(f"fig/3.png"), 0, 0.9)
+            img = pg.transform.flip(img0, True, False)  # デフォルトのこうかとん
+            self.imgs = {
+                (+1, 0): img,  # 右
+                (+1, -1): pg.transform.rotozoom(img, 45, 0.9),  # 右上
+                (0, -1): pg.transform.rotozoom(img, 90, 0.9),  # 上
+                (-1, -1): pg.transform.rotozoom(img0, -45, 0.9),  # 左上
+                (-1, 0): img0,  # 左
+                (-1, +1): pg.transform.rotozoom(img0, 45, 0.9),  # 左下
+                (0, +1): pg.transform.rotozoom(img, -90, 0.9),  # 下
+                (+1, +1): pg.transform.rotozoom(img, -45, 0.9),  # 右下
+            }
+            self.image = self.imgs[self.dire]
+        except:
+            # ファイルが見つからない場合は何もしない
+            pass
 
     def update(self, key_lst: list[bool], screen: pg.Surface):
         """
@@ -99,6 +123,18 @@ class Bird(pg.sprite.Sprite):
         if not (sum_mv[0] == 0 and sum_mv[1] == 0):
             self.dire = tuple(sum_mv)
             self.image = self.imgs[self.dire]
+        
+        # 無敵状態の処理
+        if self.state == "hyper":
+            # 画像を変換（エフェクト）
+            self.image = pg.transform.laplacian(self.image)
+            # 無敵時間を減算
+            self.hyper_life -= 1
+            if self.hyper_life < 0:
+                self.state = "normal"
+                # 無敵終了時に通常の画像に戻す
+                self.reset_images()
+        
         screen.blit(self.image, self.rect)
 
 
@@ -387,13 +423,20 @@ def main():
                 #複数ビーム
                 if event.type == pg.KEYDOWN and event.key == pg.K_SPACE:
                     beams.add(NeoBeam(bird, NUM_OF_BEAMS).gen_beams())
+            
+            # 無敵モード発動処理
+            if event.type == pg.KEYDOWN and event.key == pg.K_RSHIFT:
+                if score.value >= 100 and bird.state == "normal":
+                    bird.state = "hyper"
+                    bird.hyper_life = 500
+                    score.value -= 100  # スコア消費
 
         #こうかとん高速化
         if key_lst[pg.K_LSHIFT]:
             bird.speed = 20
         else:
             bird.speed = 10
-
+                    
         screen.blit(bg_img, [0, 0])
 
         if tmr%200 == 0:  # 200フレームに1回，敵機を出現させる
@@ -417,15 +460,20 @@ def main():
         for shield in shields:
             for bomb in pg.sprite.spritecollide(shield, bombs, True):
                 exps.add(Explosion(bomb, 30))
-        
-        for bomb in pg.sprite.spritecollide(bird, bombs, True):
+
+        for bomb in pg.sprite.spritecollide(bird, bombs, True):  # こうかとんと衝突した爆弾リスト
+            if bird.state == "hyper":
+                exps.add(Explosion(bomb, 50))
+                score.value += 1
             if bomb.state == "inactive":
                 continue  # 無効化された爆弾は起爆しない
-            bird.change_img(8, screen)  # 悲しみエフェクト
-            score.update(screen)
-            pg.display.update()
-            time.sleep(2)
-            return
+            else:
+                bird.change_img(8, screen)  # こうかとん悲しみエフェクト
+                score.update(screen)
+                pg.display.update()
+                time.sleep(2)
+                return
+        
 
         for g in gravity: # 爆弾と衝突判定
             for bomb in pg.sprite.spritecollide(g, bombs, False):

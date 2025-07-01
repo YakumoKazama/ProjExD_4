@@ -465,7 +465,7 @@ def main():
             if bird.state == "hyper":
                 exps.add(Explosion(bomb, 50))
                 score.value += 1
-            if bomb.state == "inactive":
+            elif bomb.state == "inactive":
                 continue  # 無効化された爆弾は起爆しない
             else:
                 bird.change_img(8, screen)  # こうかとん悲しみエフェクト

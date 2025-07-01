@@ -344,9 +344,9 @@ def main():
     screen = pg.display.set_mode((WIDTH, HEIGHT))
     bg_img = pg.image.load(f"fig/pg_bg.jpg")
     score = Score()
-    emps = pg.sprite.Group()
-
     bird = Bird(3, (900, 400))
+    
+    emps = pg.sprite.Group()
     bombs = pg.sprite.Group()
     beams = pg.sprite.Group()
     exps = pg.sprite.Group()
@@ -355,6 +355,7 @@ def main():
     shields = pg.sprite.Group()
 
     NUM_OF_BEAMS = 50 #1度に発射するビームの本数
+    
     score.value = 10000
     tmr = 0
     clock = pg.time.Clock()
@@ -433,7 +434,8 @@ def main():
                 exps.add(Explosion(enemy,100))
                 enemy.kill()
         
-        bird.update(key_lst, screen)
+        gravity.update()
+        gravity.draw(screen)
         shields.update(bird)
         shields.draw(screen)
         beams.update()
@@ -442,17 +444,12 @@ def main():
         emys.draw(screen)
         bombs.update()
         bombs.draw(screen)
-        gravity.update()
-        gravity.draw(screen)
         exps.update()
         exps.draw(screen)
-        score.update(screen)
-        bird.update(key_lst, screen)
-        score.update(screen)
         emps.update()
         emps.draw(screen) 
-        exps.update()
-        exps.draw(screen)
+        bird.update(key_lst, screen)
+        score.update(screen)
         pg.display.update()
         tmr += 1
         clock.tick(50)
